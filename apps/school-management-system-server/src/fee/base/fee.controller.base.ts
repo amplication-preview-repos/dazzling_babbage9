@@ -16,31 +16,76 @@ import * as errors from "../../errors";
 import { Request } from "express";
 import { plainToClass } from "class-transformer";
 import { ApiNestedQuery } from "../../decorators/api-nested-query.decorator";
+import * as nestAccessControl from "nest-access-control";
+import * as defaultAuthGuard from "../../auth/defaultAuth.guard";
 import { FeeService } from "../fee.service";
+import { AclValidateRequestInterceptor } from "../../interceptors/aclValidateRequest.interceptor";
+import { AclFilterResponseInterceptor } from "../../interceptors/aclFilterResponse.interceptor";
 import { FeeCreateInput } from "./FeeCreateInput";
 import { Fee } from "./Fee";
 import { FeeFindManyArgs } from "./FeeFindManyArgs";
 import { FeeWhereUniqueInput } from "./FeeWhereUniqueInput";
 import { FeeUpdateInput } from "./FeeUpdateInput";
 
+@swagger.ApiBearerAuth()
+@common.UseGuards(defaultAuthGuard.DefaultAuthGuard, nestAccessControl.ACGuard)
 export class FeeControllerBase {
-  constructor(protected readonly service: FeeService) {}
+  constructor(
+    protected readonly service: FeeService,
+    protected readonly rolesBuilder: nestAccessControl.RolesBuilder
+  ) {}
+  @common.UseInterceptors(AclValidateRequestInterceptor)
   @common.Post()
   @swagger.ApiCreatedResponse({ type: Fee })
+  @nestAccessControl.UseRoles({
+    resource: "Fee",
+    action: "create",
+    possession: "any",
+  })
+  @swagger.ApiForbiddenResponse({
+    type: errors.ForbiddenException,
+  })
   async createFee(@common.Body() data: FeeCreateInput): Promise<Fee> {
     return await this.service.createFee({
-      data: data,
+      data: {
+        ...data,
+
+        student: data.student
+          ? {
+              connect: data.student,
+            }
+          : undefined,
+      },
       select: {
         id: true,
         createdAt: true,
         updatedAt: true,
+        amount: true,
+        paymentDate: true,
+        paymentFrequency: true,
+        installments: true,
+
+        student: {
+          select: {
+            id: true,
+          },
+        },
       },
     });
   }
 
+  @common.UseInterceptors(AclFilterResponseInterceptor)
   @common.Get()
   @swagger.ApiOkResponse({ type: [Fee] })
   @ApiNestedQuery(FeeFindManyArgs)
+  @nestAccessControl.UseRoles({
+    resource: "Fee",
+    action: "read",
+    possession: "any",
+  })
+  @swagger.ApiForbiddenResponse({
+    type: errors.ForbiddenException,
+  })
   async fees(@common.Req() request: Request): Promise<Fee[]> {
     const args = plainToClass(FeeFindManyArgs, request.query);
     return this.service.fees({
@@ -49,13 +94,32 @@ export class FeeControllerBase {
         id: true,
         createdAt: true,
         updatedAt: true,
+        amount: true,
+        paymentDate: true,
+        paymentFrequency: true,
+        installments: true,
+
+        student: {
+          select: {
+            id: true,
+          },
+        },
       },
     });
   }
 
+  @common.UseInterceptors(AclFilterResponseInterceptor)
   @common.Get("/:id")
   @swagger.ApiOkResponse({ type: Fee })
   @swagger.ApiNotFoundResponse({ type: errors.NotFoundException })
+  @nestAccessControl.UseRoles({
+    resource: "Fee",
+    action: "read",
+    possession: "own",
+  })
+  @swagger.ApiForbiddenResponse({
+    type: errors.ForbiddenException,
+  })
   async fee(@common.Param() params: FeeWhereUniqueInput): Promise<Fee | null> {
     const result = await this.service.fee({
       where: params,
@@ -63,6 +127,16 @@ export class FeeControllerBase {
         id: true,
         createdAt: true,
         updatedAt: true,
+        amount: true,
+        paymentDate: true,
+        paymentFrequency: true,
+        installments: true,
+
+        student: {
+          select: {
+            id: true,
+          },
+        },
       },
     });
     if (result === null) {
@@ -73,9 +147,18 @@ export class FeeControllerBase {
     return result;
   }
 
+  @common.UseInterceptors(AclValidateRequestInterceptor)
   @common.Patch("/:id")
   @swagger.ApiOkResponse({ type: Fee })
   @swagger.ApiNotFoundResponse({ type: errors.NotFoundException })
+  @nestAccessControl.UseRoles({
+    resource: "Fee",
+    action: "update",
+    possession: "any",
+  })
+  @swagger.ApiForbiddenResponse({
+    type: errors.ForbiddenException,
+  })
   async updateFee(
     @common.Param() params: FeeWhereUniqueInput,
     @common.Body() data: FeeUpdateInput
@@ -83,11 +166,29 @@ export class FeeControllerBase {
     try {
       return await this.service.updateFee({
         where: params,
-        data: data,
+        data: {
+          ...data,
+
+          student: data.student
+            ? {
+                connect: data.student,
+              }
+            : undefined,
+        },
         select: {
           id: true,
           createdAt: true,
           updatedAt: true,
+          amount: true,
+          paymentDate: true,
+          paymentFrequency: true,
+          installments: true,
+
+          student: {
+            select: {
+              id: true,
+            },
+          },
         },
       });
     } catch (error) {
@@ -103,6 +204,14 @@ export class FeeControllerBase {
   @common.Delete("/:id")
   @swagger.ApiOkResponse({ type: Fee })
   @swagger.ApiNotFoundResponse({ type: errors.NotFoundException })
+  @nestAccessControl.UseRoles({
+    resource: "Fee",
+    action: "delete",
+    possession: "any",
+  })
+  @swagger.ApiForbiddenResponse({
+    type: errors.ForbiddenException,
+  })
   async deleteFee(
     @common.Param() params: FeeWhereUniqueInput
   ): Promise<Fee | null> {
@@ -113,6 +222,16 @@ export class FeeControllerBase {
           id: true,
           createdAt: true,
           updatedAt: true,
+          amount: true,
+          paymentDate: true,
+          paymentFrequency: true,
+          installments: true,
+
+          student: {
+            select: {
+              id: true,
+            },
+          },
         },
       });
     } catch (error) {

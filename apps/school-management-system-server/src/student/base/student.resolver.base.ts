@@ -13,16 +13,38 @@ import * as graphql from "@nestjs/graphql";
 import { GraphQLError } from "graphql";
 import { isRecordNotFoundError } from "../../prisma.util";
 import { MetaQueryPayload } from "../../util/MetaQueryPayload";
+import * as nestAccessControl from "nest-access-control";
+import * as gqlACGuard from "../../auth/gqlAC.guard";
+import { GqlDefaultAuthGuard } from "../../auth/gqlDefaultAuth.guard";
+import * as common from "@nestjs/common";
+import { GraphQLUpload } from "graphql-upload";
+import { FileUpload } from "src/storage/base/storage.types";
+import { AclFilterResponseInterceptor } from "../../interceptors/aclFilterResponse.interceptor";
+import { AclValidateRequestInterceptor } from "../../interceptors/aclValidateRequest.interceptor";
 import { Student } from "./Student";
 import { StudentCountArgs } from "./StudentCountArgs";
 import { StudentFindManyArgs } from "./StudentFindManyArgs";
 import { StudentFindUniqueArgs } from "./StudentFindUniqueArgs";
+import { CreateStudentArgs } from "./CreateStudentArgs";
+import { UpdateStudentArgs } from "./UpdateStudentArgs";
 import { DeleteStudentArgs } from "./DeleteStudentArgs";
+import { FeeFindManyArgs } from "../../fee/base/FeeFindManyArgs";
+import { Fee } from "../../fee/base/Fee";
 import { StudentService } from "../student.service";
+@common.UseGuards(GqlDefaultAuthGuard, gqlACGuard.GqlACGuard)
 @graphql.Resolver(() => Student)
 export class StudentResolverBase {
-  constructor(protected readonly service: StudentService) {}
+  constructor(
+    protected readonly service: StudentService,
+    protected readonly rolesBuilder: nestAccessControl.RolesBuilder
+  ) {}
 
+  @graphql.Query(() => MetaQueryPayload)
+  @nestAccessControl.UseRoles({
+    resource: "Student",
+    action: "read",
+    possession: "any",
+  })
   async _studentsMeta(
     @graphql.Args() args: StudentCountArgs
   ): Promise<MetaQueryPayload> {
@@ -32,14 +54,26 @@ export class StudentResolverBase {
     };
   }
 
+  @common.UseInterceptors(AclFilterResponseInterceptor)
   @graphql.Query(() => [Student])
+  @nestAccessControl.UseRoles({
+    resource: "Student",
+    action: "read",
+    possession: "any",
+  })
   async students(
     @graphql.Args() args: StudentFindManyArgs
   ): Promise<Student[]> {
     return this.service.students(args);
   }
 
+  @common.UseInterceptors(AclFilterResponseInterceptor)
   @graphql.Query(() => Student, { nullable: true })
+  @nestAccessControl.UseRoles({
+    resource: "Student",
+    action: "read",
+    possession: "own",
+  })
   async student(
     @graphql.Args() args: StudentFindUniqueArgs
   ): Promise<Student | null> {
@@ -50,7 +84,53 @@ export class StudentResolverBase {
     return result;
   }
 
+  @common.UseInterceptors(AclValidateRequestInterceptor)
   @graphql.Mutation(() => Student)
+  @nestAccessControl.UseRoles({
+    resource: "Student",
+    action: "create",
+    possession: "any",
+  })
+  async createStudent(
+    @graphql.Args() args: CreateStudentArgs
+  ): Promise<Student> {
+    return await this.service.createStudent({
+      ...args,
+      data: args.data,
+    });
+  }
+
+  @common.UseInterceptors(AclValidateRequestInterceptor)
+  @graphql.Mutation(() => Student)
+  @nestAccessControl.UseRoles({
+    resource: "Student",
+    action: "update",
+    possession: "any",
+  })
+  async updateStudent(
+    @graphql.Args() args: UpdateStudentArgs
+  ): Promise<Student | null> {
+    try {
+      return await this.service.updateStudent({
+        ...args,
+        data: args.data,
+      });
+    } catch (error) {
+      if (isRecordNotFoundError(error)) {
+        throw new GraphQLError(
+          `No resource was found for ${JSON.stringify(args.where)}`
+        );
+      }
+      throw error;
+    }
+  }
+
+  @graphql.Mutation(() => Student)
+  @nestAccessControl.UseRoles({
+    resource: "Student",
+    action: "delete",
+    possession: "any",
+  })
   async deleteStudent(
     @graphql.Args() args: DeleteStudentArgs
   ): Promise<Student | null> {
@@ -64,5 +144,67 @@ export class StudentResolverBase {
       }
       throw error;
     }
+  }
+
+  @graphql.Mutation(() => Student)
+  async uploadDocuments(
+    @graphql.Args({
+      name: "file",
+      type: () => GraphQLUpload,
+    })
+    file: FileUpload,
+    @graphql.Args()
+    args: StudentFindUniqueArgs
+  ): Promise<Student> {
+    return await this.service.uploadDocuments(args, file);
+  }
+
+  @graphql.Mutation(() => Student)
+  async deleteDocuments(
+    @graphql.Args()
+    args: StudentFindUniqueArgs
+  ): Promise<Student> {
+    return await this.service.deleteDocuments(args);
+  }
+
+  @graphql.Mutation(() => Student)
+  async uploadPhotos(
+    @graphql.Args({
+      name: "file",
+      type: () => GraphQLUpload,
+    })
+    file: FileUpload,
+    @graphql.Args()
+    args: StudentFindUniqueArgs
+  ): Promise<Student> {
+    return await this.service.uploadPhotos(args, file);
+  }
+
+  @graphql.Mutation(() => Student)
+  async deletePhotos(
+    @graphql.Args()
+    args: StudentFindUniqueArgs
+  ): Promise<Student> {
+    return await this.service.deletePhotos(args);
+  }
+
+  @common.UseInterceptors(AclFilterResponseInterceptor)
+  @graphql.ResolveField(() => [Fee], { name: "fees" })
+  @nestAccessControl.UseRoles({
+    resource: "Fee",
+    action: "read",
+    possession: "any",
+  })
+  async findFees(
+    @graphql.Parent() parent: Student,
+    @graphql.Args() args: FeeFindManyArgs
+  ): Promise<Fee[]> {
+    const results = await this.service.findFees(parent.id, args);
+
+    if (!results) {
+      return [];
+    }
+
+    return results;
   }
 }

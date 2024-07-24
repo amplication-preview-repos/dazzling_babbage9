@@ -4,4 +4,6 @@ export type HolidayOrderByInput = {
   id?: SortOrder;
   createdAt?: SortOrder;
   updatedAt?: SortOrder;
+  name?: SortOrder;
+  date?: SortOrder;
 };

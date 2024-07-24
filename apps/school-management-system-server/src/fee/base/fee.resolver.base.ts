@@ -13,16 +13,35 @@ import * as graphql from "@nestjs/graphql";
 import { GraphQLError } from "graphql";
 import { isRecordNotFoundError } from "../../prisma.util";
 import { MetaQueryPayload } from "../../util/MetaQueryPayload";
+import * as nestAccessControl from "nest-access-control";
+import * as gqlACGuard from "../../auth/gqlAC.guard";
+import { GqlDefaultAuthGuard } from "../../auth/gqlDefaultAuth.guard";
+import * as common from "@nestjs/common";
+import { AclFilterResponseInterceptor } from "../../interceptors/aclFilterResponse.interceptor";
+import { AclValidateRequestInterceptor } from "../../interceptors/aclValidateRequest.interceptor";
 import { Fee } from "./Fee";
 import { FeeCountArgs } from "./FeeCountArgs";
 import { FeeFindManyArgs } from "./FeeFindManyArgs";
 import { FeeFindUniqueArgs } from "./FeeFindUniqueArgs";
+import { CreateFeeArgs } from "./CreateFeeArgs";
+import { UpdateFeeArgs } from "./UpdateFeeArgs";
 import { DeleteFeeArgs } from "./DeleteFeeArgs";
+import { Student } from "../../student/base/Student";
 import { FeeService } from "../fee.service";
+@common.UseGuards(GqlDefaultAuthGuard, gqlACGuard.GqlACGuard)
 @graphql.Resolver(() => Fee)
 export class FeeResolverBase {
-  constructor(protected readonly service: FeeService) {}
+  constructor(
+    protected readonly service: FeeService,
+    protected readonly rolesBuilder: nestAccessControl.RolesBuilder
+  ) {}
 
+  @graphql.Query(() => MetaQueryPayload)
+  @nestAccessControl.UseRoles({
+    resource: "Fee",
+    action: "read",
+    possession: "any",
+  })
   async _feesMeta(
     @graphql.Args() args: FeeCountArgs
   ): Promise<MetaQueryPayload> {
@@ -32,12 +51,24 @@ export class FeeResolverBase {
     };
   }
 
+  @common.UseInterceptors(AclFilterResponseInterceptor)
   @graphql.Query(() => [Fee])
+  @nestAccessControl.UseRoles({
+    resource: "Fee",
+    action: "read",
+    possession: "any",
+  })
   async fees(@graphql.Args() args: FeeFindManyArgs): Promise<Fee[]> {
     return this.service.fees(args);
   }
 
+  @common.UseInterceptors(AclFilterResponseInterceptor)
   @graphql.Query(() => Fee, { nullable: true })
+  @nestAccessControl.UseRoles({
+    resource: "Fee",
+    action: "read",
+    possession: "own",
+  })
   async fee(@graphql.Args() args: FeeFindUniqueArgs): Promise<Fee | null> {
     const result = await this.service.fee(args);
     if (result === null) {
@@ -46,7 +77,65 @@ export class FeeResolverBase {
     return result;
   }
 
+  @common.UseInterceptors(AclValidateRequestInterceptor)
   @graphql.Mutation(() => Fee)
+  @nestAccessControl.UseRoles({
+    resource: "Fee",
+    action: "create",
+    possession: "any",
+  })
+  async createFee(@graphql.Args() args: CreateFeeArgs): Promise<Fee> {
+    return await this.service.createFee({
+      ...args,
+      data: {
+        ...args.data,
+
+        student: args.data.student
+          ? {
+              connect: args.data.student,
+            }
+          : undefined,
+      },
+    });
+  }
+
+  @common.UseInterceptors(AclValidateRequestInterceptor)
+  @graphql.Mutation(() => Fee)
+  @nestAccessControl.UseRoles({
+    resource: "Fee",
+    action: "update",
+    possession: "any",
+  })
+  async updateFee(@graphql.Args() args: UpdateFeeArgs): Promise<Fee | null> {
+    try {
+      return await this.service.updateFee({
+        ...args,
+        data: {
+          ...args.data,
+
+          student: args.data.student
+            ? {
+                connect: args.data.student,
+              }
+            : undefined,
+        },
+      });
+    } catch (error) {
+      if (isRecordNotFoundError(error)) {
+        throw new GraphQLError(
+          `No resource was found for ${JSON.stringify(args.where)}`
+        );
+      }
+      throw error;
+    }
+  }
+
+  @graphql.Mutation(() => Fee)
+  @nestAccessControl.UseRoles({
+    resource: "Fee",
+    action: "delete",
+    possession: "any",
+  })
   async deleteFee(@graphql.Args() args: DeleteFeeArgs): Promise<Fee | null> {
     try {
       return await this.service.deleteFee(args);
@@ -58,5 +147,24 @@ export class FeeResolverBase {
       }
       throw error;
     }
+  }
+
+  @common.UseInterceptors(AclFilterResponseInterceptor)
+  @graphql.ResolveField(() => Student, {
+    nullable: true,
+    name: "student",
+  })
+  @nestAccessControl.UseRoles({
+    resource: "Student",
+    action: "read",
+    possession: "any",
+  })
+  async getStudent(@graphql.Parent() parent: Fee): Promise<Student | null> {
+    const result = await this.service.getStudent(parent.id);
+
+    if (!result) {
+      return null;
+    }
+    return result;
   }
 }

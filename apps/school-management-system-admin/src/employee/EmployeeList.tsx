@@ -15,6 +15,9 @@ export const EmployeeList = (props: ListProps): React.ReactElement => {
         <TextField label="ID" source="id" />
         <DateField source="createdAt" label="Created At" />
         <DateField source="updatedAt" label="Updated At" />
+        <TextField label="name" source="name" />
+        <TextField label="position" source="position" />
+        <TextField label="salaryDetails" source="salaryDetails" />
       </Datagrid>
     </List>
   );

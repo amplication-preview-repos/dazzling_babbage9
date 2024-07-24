@@ -13,16 +13,35 @@ import * as graphql from "@nestjs/graphql";
 import { GraphQLError } from "graphql";
 import { isRecordNotFoundError } from "../../prisma.util";
 import { MetaQueryPayload } from "../../util/MetaQueryPayload";
+import * as nestAccessControl from "nest-access-control";
+import * as gqlACGuard from "../../auth/gqlAC.guard";
+import { GqlDefaultAuthGuard } from "../../auth/gqlDefaultAuth.guard";
+import * as common from "@nestjs/common";
+import { AclFilterResponseInterceptor } from "../../interceptors/aclFilterResponse.interceptor";
+import { AclValidateRequestInterceptor } from "../../interceptors/aclValidateRequest.interceptor";
 import { Subscription } from "./Subscription";
 import { SubscriptionCountArgs } from "./SubscriptionCountArgs";
 import { SubscriptionFindManyArgs } from "./SubscriptionFindManyArgs";
 import { SubscriptionFindUniqueArgs } from "./SubscriptionFindUniqueArgs";
+import { CreateSubscriptionArgs } from "./CreateSubscriptionArgs";
+import { UpdateSubscriptionArgs } from "./UpdateSubscriptionArgs";
 import { DeleteSubscriptionArgs } from "./DeleteSubscriptionArgs";
+import { School } from "../../school/base/School";
 import { SubscriptionService } from "../subscription.service";
+@common.UseGuards(GqlDefaultAuthGuard, gqlACGuard.GqlACGuard)
 @graphql.Resolver(() => Subscription)
 export class SubscriptionResolverBase {
-  constructor(protected readonly service: SubscriptionService) {}
+  constructor(
+    protected readonly service: SubscriptionService,
+    protected readonly rolesBuilder: nestAccessControl.RolesBuilder
+  ) {}
 
+  @graphql.Query(() => MetaQueryPayload)
+  @nestAccessControl.UseRoles({
+    resource: "Subscription",
+    action: "read",
+    possession: "any",
+  })
   async _subscriptionsMeta(
     @graphql.Args() args: SubscriptionCountArgs
   ): Promise<MetaQueryPayload> {
@@ -32,14 +51,26 @@ export class SubscriptionResolverBase {
     };
   }
 
+  @common.UseInterceptors(AclFilterResponseInterceptor)
   @graphql.Query(() => [Subscription])
+  @nestAccessControl.UseRoles({
+    resource: "Subscription",
+    action: "read",
+    possession: "any",
+  })
   async subscriptions(
     @graphql.Args() args: SubscriptionFindManyArgs
   ): Promise<Subscription[]> {
     return this.service.subscriptions(args);
   }
 
+  @common.UseInterceptors(AclFilterResponseInterceptor)
   @graphql.Query(() => Subscription, { nullable: true })
+  @nestAccessControl.UseRoles({
+    resource: "Subscription",
+    action: "read",
+    possession: "own",
+  })
   async subscription(
     @graphql.Args() args: SubscriptionFindUniqueArgs
   ): Promise<Subscription | null> {
@@ -50,7 +81,69 @@ export class SubscriptionResolverBase {
     return result;
   }
 
+  @common.UseInterceptors(AclValidateRequestInterceptor)
   @graphql.Mutation(() => Subscription)
+  @nestAccessControl.UseRoles({
+    resource: "Subscription",
+    action: "create",
+    possession: "any",
+  })
+  async createSubscription(
+    @graphql.Args() args: CreateSubscriptionArgs
+  ): Promise<Subscription> {
+    return await this.service.createSubscription({
+      ...args,
+      data: {
+        ...args.data,
+
+        school: args.data.school
+          ? {
+              connect: args.data.school,
+            }
+          : undefined,
+      },
+    });
+  }
+
+  @common.UseInterceptors(AclValidateRequestInterceptor)
+  @graphql.Mutation(() => Subscription)
+  @nestAccessControl.UseRoles({
+    resource: "Subscription",
+    action: "update",
+    possession: "any",
+  })
+  async updateSubscription(
+    @graphql.Args() args: UpdateSubscriptionArgs
+  ): Promise<Subscription | null> {
+    try {
+      return await this.service.updateSubscription({
+        ...args,
+        data: {
+          ...args.data,
+
+          school: args.data.school
+            ? {
+                connect: args.data.school,
+              }
+            : undefined,
+        },
+      });
+    } catch (error) {
+      if (isRecordNotFoundError(error)) {
+        throw new GraphQLError(
+          `No resource was found for ${JSON.stringify(args.where)}`
+        );
+      }
+      throw error;
+    }
+  }
+
+  @graphql.Mutation(() => Subscription)
+  @nestAccessControl.UseRoles({
+    resource: "Subscription",
+    action: "delete",
+    possession: "any",
+  })
   async deleteSubscription(
     @graphql.Args() args: DeleteSubscriptionArgs
   ): Promise<Subscription | null> {
@@ -64,5 +157,26 @@ export class SubscriptionResolverBase {
       }
       throw error;
     }
+  }
+
+  @common.UseInterceptors(AclFilterResponseInterceptor)
+  @graphql.ResolveField(() => School, {
+    nullable: true,
+    name: "school",
+  })
+  @nestAccessControl.UseRoles({
+    resource: "School",
+    action: "read",
+    possession: "any",
+  })
+  async getSchool(
+    @graphql.Parent() parent: Subscription
+  ): Promise<School | null> {
+    const result = await this.service.getSchool(parent.id);
+
+    if (!result) {
+      return null;
+    }
+    return result;
   }
 }

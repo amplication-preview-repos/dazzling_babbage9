@@ -16,17 +16,35 @@ import * as errors from "../../errors";
 import { Request } from "express";
 import { plainToClass } from "class-transformer";
 import { ApiNestedQuery } from "../../decorators/api-nested-query.decorator";
+import * as nestAccessControl from "nest-access-control";
+import * as defaultAuthGuard from "../../auth/defaultAuth.guard";
 import { HolidayService } from "../holiday.service";
+import { AclValidateRequestInterceptor } from "../../interceptors/aclValidateRequest.interceptor";
+import { AclFilterResponseInterceptor } from "../../interceptors/aclFilterResponse.interceptor";
 import { HolidayCreateInput } from "./HolidayCreateInput";
 import { Holiday } from "./Holiday";
 import { HolidayFindManyArgs } from "./HolidayFindManyArgs";
 import { HolidayWhereUniqueInput } from "./HolidayWhereUniqueInput";
 import { HolidayUpdateInput } from "./HolidayUpdateInput";
 
+@swagger.ApiBearerAuth()
+@common.UseGuards(defaultAuthGuard.DefaultAuthGuard, nestAccessControl.ACGuard)
 export class HolidayControllerBase {
-  constructor(protected readonly service: HolidayService) {}
+  constructor(
+    protected readonly service: HolidayService,
+    protected readonly rolesBuilder: nestAccessControl.RolesBuilder
+  ) {}
+  @common.UseInterceptors(AclValidateRequestInterceptor)
   @common.Post()
   @swagger.ApiCreatedResponse({ type: Holiday })
+  @nestAccessControl.UseRoles({
+    resource: "Holiday",
+    action: "create",
+    possession: "any",
+  })
+  @swagger.ApiForbiddenResponse({
+    type: errors.ForbiddenException,
+  })
   async createHoliday(
     @common.Body() data: HolidayCreateInput
   ): Promise<Holiday> {
@@ -36,13 +54,24 @@ export class HolidayControllerBase {
         id: true,
         createdAt: true,
         updatedAt: true,
+        name: true,
+        date: true,
       },
     });
   }
 
+  @common.UseInterceptors(AclFilterResponseInterceptor)
   @common.Get()
   @swagger.ApiOkResponse({ type: [Holiday] })
   @ApiNestedQuery(HolidayFindManyArgs)
+  @nestAccessControl.UseRoles({
+    resource: "Holiday",
+    action: "read",
+    possession: "any",
+  })
+  @swagger.ApiForbiddenResponse({
+    type: errors.ForbiddenException,
+  })
   async holidays(@common.Req() request: Request): Promise<Holiday[]> {
     const args = plainToClass(HolidayFindManyArgs, request.query);
     return this.service.holidays({
@@ -51,13 +80,24 @@ export class HolidayControllerBase {
         id: true,
         createdAt: true,
         updatedAt: true,
+        name: true,
+        date: true,
       },
     });
   }
 
+  @common.UseInterceptors(AclFilterResponseInterceptor)
   @common.Get("/:id")
   @swagger.ApiOkResponse({ type: Holiday })
   @swagger.ApiNotFoundResponse({ type: errors.NotFoundException })
+  @nestAccessControl.UseRoles({
+    resource: "Holiday",
+    action: "read",
+    possession: "own",
+  })
+  @swagger.ApiForbiddenResponse({
+    type: errors.ForbiddenException,
+  })
   async holiday(
     @common.Param() params: HolidayWhereUniqueInput
   ): Promise<Holiday | null> {
@@ -67,6 +107,8 @@ export class HolidayControllerBase {
         id: true,
         createdAt: true,
         updatedAt: true,
+        name: true,
+        date: true,
       },
     });
     if (result === null) {
@@ -77,9 +119,18 @@ export class HolidayControllerBase {
     return result;
   }
 
+  @common.UseInterceptors(AclValidateRequestInterceptor)
   @common.Patch("/:id")
   @swagger.ApiOkResponse({ type: Holiday })
   @swagger.ApiNotFoundResponse({ type: errors.NotFoundException })
+  @nestAccessControl.UseRoles({
+    resource: "Holiday",
+    action: "update",
+    possession: "any",
+  })
+  @swagger.ApiForbiddenResponse({
+    type: errors.ForbiddenException,
+  })
   async updateHoliday(
     @common.Param() params: HolidayWhereUniqueInput,
     @common.Body() data: HolidayUpdateInput
@@ -92,6 +143,8 @@ export class HolidayControllerBase {
           id: true,
           createdAt: true,
           updatedAt: true,
+          name: true,
+          date: true,
         },
       });
     } catch (error) {
@@ -107,6 +160,14 @@ export class HolidayControllerBase {
   @common.Delete("/:id")
   @swagger.ApiOkResponse({ type: Holiday })
   @swagger.ApiNotFoundResponse({ type: errors.NotFoundException })
+  @nestAccessControl.UseRoles({
+    resource: "Holiday",
+    action: "delete",
+    possession: "any",
+  })
+  @swagger.ApiForbiddenResponse({
+    type: errors.ForbiddenException,
+  })
   async deleteHoliday(
     @common.Param() params: HolidayWhereUniqueInput
   ): Promise<Holiday | null> {
@@ -117,6 +178,8 @@ export class HolidayControllerBase {
           id: true,
           createdAt: true,
           updatedAt: true,
+          name: true,
+          date: true,
         },
       });
     } catch (error) {

@@ -21,23 +21,27 @@ const CREATE_INPUT = {
   id: "exampleId",
   createdAt: new Date(),
   updatedAt: new Date(),
+  expirationDate: new Date(),
 };
 const CREATE_RESULT = {
   id: "exampleId",
   createdAt: new Date(),
   updatedAt: new Date(),
+  expirationDate: new Date(),
 };
 const FIND_MANY_RESULT = [
   {
     id: "exampleId",
     createdAt: new Date(),
     updatedAt: new Date(),
+    expirationDate: new Date(),
   },
 ];
 const FIND_ONE_RESULT = {
   id: "exampleId",
   createdAt: new Date(),
   updatedAt: new Date(),
+  expirationDate: new Date(),
 };
 
 const service = {
@@ -124,6 +128,7 @@ describe("Subscription", () => {
         ...CREATE_RESULT,
         createdAt: CREATE_RESULT.createdAt.toISOString(),
         updatedAt: CREATE_RESULT.updatedAt.toISOString(),
+        expirationDate: CREATE_RESULT.expirationDate.toISOString(),
       });
   });
 
@@ -136,6 +141,7 @@ describe("Subscription", () => {
           ...FIND_MANY_RESULT[0],
           createdAt: FIND_MANY_RESULT[0].createdAt.toISOString(),
           updatedAt: FIND_MANY_RESULT[0].updatedAt.toISOString(),
+          expirationDate: FIND_MANY_RESULT[0].expirationDate.toISOString(),
         },
       ]);
   });
@@ -159,6 +165,7 @@ describe("Subscription", () => {
         ...FIND_ONE_RESULT,
         createdAt: FIND_ONE_RESULT.createdAt.toISOString(),
         updatedAt: FIND_ONE_RESULT.updatedAt.toISOString(),
+        expirationDate: FIND_ONE_RESULT.expirationDate.toISOString(),
       });
   });
 
@@ -172,6 +179,7 @@ describe("Subscription", () => {
         ...CREATE_RESULT,
         createdAt: CREATE_RESULT.createdAt.toISOString(),
         updatedAt: CREATE_RESULT.updatedAt.toISOString(),
+        expirationDate: CREATE_RESULT.expirationDate.toISOString(),
       })
       .then(function () {
         agent

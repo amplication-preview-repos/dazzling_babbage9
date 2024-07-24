@@ -13,20 +13,42 @@ import * as common from "@nestjs/common";
 import * as swagger from "@nestjs/swagger";
 import { isRecordNotFoundError } from "../../prisma.util";
 import * as errors from "../../errors";
-import { Request } from "express";
+import { Request, Response } from "express";
 import { plainToClass } from "class-transformer";
 import { ApiNestedQuery } from "../../decorators/api-nested-query.decorator";
+import * as nestAccessControl from "nest-access-control";
+import * as defaultAuthGuard from "../../auth/defaultAuth.guard";
+import { FileInterceptor } from "@nestjs/platform-express";
 import { StudentService } from "../student.service";
+import { AclValidateRequestInterceptor } from "../../interceptors/aclValidateRequest.interceptor";
+import { AclFilterResponseInterceptor } from "../../interceptors/aclFilterResponse.interceptor";
 import { StudentCreateInput } from "./StudentCreateInput";
 import { Student } from "./Student";
 import { StudentFindManyArgs } from "./StudentFindManyArgs";
 import { StudentWhereUniqueInput } from "./StudentWhereUniqueInput";
 import { StudentUpdateInput } from "./StudentUpdateInput";
+import { FeeFindManyArgs } from "../../fee/base/FeeFindManyArgs";
+import { Fee } from "../../fee/base/Fee";
+import { FeeWhereUniqueInput } from "../../fee/base/FeeWhereUniqueInput";
 
+@swagger.ApiBearerAuth()
+@common.UseGuards(defaultAuthGuard.DefaultAuthGuard, nestAccessControl.ACGuard)
 export class StudentControllerBase {
-  constructor(protected readonly service: StudentService) {}
+  constructor(
+    protected readonly service: StudentService,
+    protected readonly rolesBuilder: nestAccessControl.RolesBuilder
+  ) {}
+  @common.UseInterceptors(AclValidateRequestInterceptor)
   @common.Post()
   @swagger.ApiCreatedResponse({ type: Student })
+  @nestAccessControl.UseRoles({
+    resource: "Student",
+    action: "create",
+    possession: "any",
+  })
+  @swagger.ApiForbiddenResponse({
+    type: errors.ForbiddenException,
+  })
   async createStudent(
     @common.Body() data: StudentCreateInput
   ): Promise<Student> {
@@ -36,13 +58,25 @@ export class StudentControllerBase {
         id: true,
         createdAt: true,
         updatedAt: true,
+        customProfile: true,
+        documents: true,
+        photos: true,
       },
     });
   }
 
+  @common.UseInterceptors(AclFilterResponseInterceptor)
   @common.Get()
   @swagger.ApiOkResponse({ type: [Student] })
   @ApiNestedQuery(StudentFindManyArgs)
+  @nestAccessControl.UseRoles({
+    resource: "Student",
+    action: "read",
+    possession: "any",
+  })
+  @swagger.ApiForbiddenResponse({
+    type: errors.ForbiddenException,
+  })
   async students(@common.Req() request: Request): Promise<Student[]> {
     const args = plainToClass(StudentFindManyArgs, request.query);
     return this.service.students({
@@ -51,13 +85,25 @@ export class StudentControllerBase {
         id: true,
         createdAt: true,
         updatedAt: true,
+        customProfile: true,
+        documents: true,
+        photos: true,
       },
     });
   }
 
+  @common.UseInterceptors(AclFilterResponseInterceptor)
   @common.Get("/:id")
   @swagger.ApiOkResponse({ type: Student })
   @swagger.ApiNotFoundResponse({ type: errors.NotFoundException })
+  @nestAccessControl.UseRoles({
+    resource: "Student",
+    action: "read",
+    possession: "own",
+  })
+  @swagger.ApiForbiddenResponse({
+    type: errors.ForbiddenException,
+  })
   async student(
     @common.Param() params: StudentWhereUniqueInput
   ): Promise<Student | null> {
@@ -67,6 +113,9 @@ export class StudentControllerBase {
         id: true,
         createdAt: true,
         updatedAt: true,
+        customProfile: true,
+        documents: true,
+        photos: true,
       },
     });
     if (result === null) {
@@ -77,9 +126,18 @@ export class StudentControllerBase {
     return result;
   }
 
+  @common.UseInterceptors(AclValidateRequestInterceptor)
   @common.Patch("/:id")
   @swagger.ApiOkResponse({ type: Student })
   @swagger.ApiNotFoundResponse({ type: errors.NotFoundException })
+  @nestAccessControl.UseRoles({
+    resource: "Student",
+    action: "update",
+    possession: "any",
+  })
+  @swagger.ApiForbiddenResponse({
+    type: errors.ForbiddenException,
+  })
   async updateStudent(
     @common.Param() params: StudentWhereUniqueInput,
     @common.Body() data: StudentUpdateInput
@@ -92,6 +150,9 @@ export class StudentControllerBase {
           id: true,
           createdAt: true,
           updatedAt: true,
+          customProfile: true,
+          documents: true,
+          photos: true,
         },
       });
     } catch (error) {
@@ -107,6 +168,14 @@ export class StudentControllerBase {
   @common.Delete("/:id")
   @swagger.ApiOkResponse({ type: Student })
   @swagger.ApiNotFoundResponse({ type: errors.NotFoundException })
+  @nestAccessControl.UseRoles({
+    resource: "Student",
+    action: "delete",
+    possession: "any",
+  })
+  @swagger.ApiForbiddenResponse({
+    type: errors.ForbiddenException,
+  })
   async deleteStudent(
     @common.Param() params: StudentWhereUniqueInput
   ): Promise<Student | null> {
@@ -117,6 +186,9 @@ export class StudentControllerBase {
           id: true,
           createdAt: true,
           updatedAt: true,
+          customProfile: true,
+          documents: true,
+          photos: true,
         },
       });
     } catch (error) {
@@ -127,5 +199,306 @@ export class StudentControllerBase {
       }
       throw error;
     }
+  }
+
+  @common.Put(":id/documents")
+  @common.UseInterceptors(FileInterceptor("file"))
+  @swagger.ApiConsumes("multipart/form-data")
+  @swagger.ApiBody({
+    schema: {
+      type: "object",
+
+      properties: {
+        file: {
+          type: "string",
+          format: "binary",
+        },
+      },
+    },
+  })
+  @swagger.ApiParam({
+    name: "id",
+    type: "string",
+    required: true,
+  })
+  @swagger.ApiCreatedResponse({
+    type: Student,
+    status: "2XX",
+  })
+  @swagger.ApiNotFoundResponse({
+    type: errors.NotFoundException,
+  })
+  async uploadDocuments(
+    @common.Param()
+    params: StudentWhereUniqueInput,
+    @common.UploadedFile()
+    file: Express.Multer.File
+  ): Promise<Student> {
+    return this.service.uploadDocuments(
+      {
+        where: params,
+      },
+      Object.assign(file, {
+        filename: file.originalname,
+      })
+    );
+  }
+
+  @common.Get(":id/documents")
+  @swagger.ApiParam({
+    name: "id",
+    type: "string",
+    required: true,
+  })
+  @swagger.ApiOkResponse({
+    type: common.StreamableFile,
+  })
+  @swagger.ApiNotFoundResponse({
+    type: errors.NotFoundException,
+  })
+  async downloadDocuments(
+    @common.Param()
+    params: StudentWhereUniqueInput,
+    @common.Res({
+      passthrough: true,
+    })
+    res: Response
+  ): Promise<common.StreamableFile> {
+    const result = await this.service.downloadDocuments({
+      where: params,
+    });
+
+    if (result === null) {
+      throw new errors.NotFoundException(
+        "No resource was found for ",
+        JSON.stringify(params)
+      );
+    }
+
+    res.setHeader(
+      "Content-Disposition",
+      `attachment; filename=${result.filename}`
+    );
+    res.setHeader("Content-Type", result.mimetype);
+    return result.stream;
+  }
+
+  @common.Delete(":id/documents")
+  @swagger.ApiOkResponse({
+    type: Student,
+  })
+  @swagger.ApiNotFoundResponse({
+    type: errors.NotFoundException,
+  })
+  async deleteDocuments(
+    @common.Param()
+    params: StudentWhereUniqueInput
+  ): Promise<Student> {
+    return this.service.deleteDocuments({
+      where: params,
+    });
+  }
+
+  @common.Put(":id/photos")
+  @common.UseInterceptors(FileInterceptor("file"))
+  @swagger.ApiConsumes("multipart/form-data")
+  @swagger.ApiBody({
+    schema: {
+      type: "object",
+
+      properties: {
+        file: {
+          type: "string",
+          format: "binary",
+        },
+      },
+    },
+  })
+  @swagger.ApiParam({
+    name: "id",
+    type: "string",
+    required: true,
+  })
+  @swagger.ApiCreatedResponse({
+    type: Student,
+    status: "2XX",
+  })
+  @swagger.ApiNotFoundResponse({
+    type: errors.NotFoundException,
+  })
+  async uploadPhotos(
+    @common.Param()
+    params: StudentWhereUniqueInput,
+    @common.UploadedFile()
+    file: Express.Multer.File
+  ): Promise<Student> {
+    return this.service.uploadPhotos(
+      {
+        where: params,
+      },
+      Object.assign(file, {
+        filename: file.originalname,
+      })
+    );
+  }
+
+  @common.Get(":id/photos")
+  @swagger.ApiParam({
+    name: "id",
+    type: "string",
+    required: true,
+  })
+  @swagger.ApiOkResponse({
+    type: common.StreamableFile,
+  })
+  @swagger.ApiNotFoundResponse({
+    type: errors.NotFoundException,
+  })
+  async downloadPhotos(
+    @common.Param()
+    params: StudentWhereUniqueInput,
+    @common.Res({
+      passthrough: true,
+    })
+    res: Response
+  ): Promise<common.StreamableFile> {
+    const result = await this.service.downloadPhotos({
+      where: params,
+    });
+
+    if (result === null) {
+      throw new errors.NotFoundException(
+        "No resource was found for ",
+        JSON.stringify(params)
+      );
+    }
+
+    res.setHeader(
+      "Content-Disposition",
+      `attachment; filename=${result.filename}`
+    );
+    res.setHeader("Content-Type", result.mimetype);
+    return result.stream;
+  }
+
+  @common.Delete(":id/photos")
+  @swagger.ApiOkResponse({
+    type: Student,
+  })
+  @swagger.ApiNotFoundResponse({
+    type: errors.NotFoundException,
+  })
+  async deletePhotos(
+    @common.Param()
+    params: StudentWhereUniqueInput
+  ): Promise<Student> {
+    return this.service.deletePhotos({
+      where: params,
+    });
+  }
+
+  @common.UseInterceptors(AclFilterResponseInterceptor)
+  @common.Get("/:id/fees")
+  @ApiNestedQuery(FeeFindManyArgs)
+  @nestAccessControl.UseRoles({
+    resource: "Fee",
+    action: "read",
+    possession: "any",
+  })
+  async findFees(
+    @common.Req() request: Request,
+    @common.Param() params: StudentWhereUniqueInput
+  ): Promise<Fee[]> {
+    const query = plainToClass(FeeFindManyArgs, request.query);
+    const results = await this.service.findFees(params.id, {
+      ...query,
+      select: {
+        id: true,
+        createdAt: true,
+        updatedAt: true,
+        amount: true,
+        paymentDate: true,
+        paymentFrequency: true,
+        installments: true,
+
+        student: {
+          select: {
+            id: true,
+          },
+        },
+      },
+    });
+    if (results === null) {
+      throw new errors.NotFoundException(
+        `No resource was found for ${JSON.stringify(params)}`
+      );
+    }
+    return results;
+  }
+
+  @common.Post("/:id/fees")
+  @nestAccessControl.UseRoles({
+    resource: "Student",
+    action: "update",
+    possession: "any",
+  })
+  async connectFees(
+    @common.Param() params: StudentWhereUniqueInput,
+    @common.Body() body: FeeWhereUniqueInput[]
+  ): Promise<void> {
+    const data = {
+      fees: {
+        connect: body,
+      },
+    };
+    await this.service.updateStudent({
+      where: params,
+      data,
+      select: { id: true },
+    });
+  }
+
+  @common.Patch("/:id/fees")
+  @nestAccessControl.UseRoles({
+    resource: "Student",
+    action: "update",
+    possession: "any",
+  })
+  async updateFees(
+    @common.Param() params: StudentWhereUniqueInput,
+    @common.Body() body: FeeWhereUniqueInput[]
+  ): Promise<void> {
+    const data = {
+      fees: {
+        set: body,
+      },
+    };
+    await this.service.updateStudent({
+      where: params,
+      data,
+      select: { id: true },
+    });
+  }
+
+  @common.Delete("/:id/fees")
+  @nestAccessControl.UseRoles({
+    resource: "Student",
+    action: "update",
+    possession: "any",
+  })
+  async disconnectFees(
+    @common.Param() params: StudentWhereUniqueInput,
+    @common.Body() body: FeeWhereUniqueInput[]
+  ): Promise<void> {
+    const data = {
+      fees: {
+        disconnect: body,
+      },
+    };
+    await this.service.updateStudent({
+      where: params,
+      data,
+      select: { id: true },
+    });
   }
 }

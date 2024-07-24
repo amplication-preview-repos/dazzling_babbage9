@@ -13,16 +13,34 @@ import * as graphql from "@nestjs/graphql";
 import { GraphQLError } from "graphql";
 import { isRecordNotFoundError } from "../../prisma.util";
 import { MetaQueryPayload } from "../../util/MetaQueryPayload";
+import * as nestAccessControl from "nest-access-control";
+import * as gqlACGuard from "../../auth/gqlAC.guard";
+import { GqlDefaultAuthGuard } from "../../auth/gqlDefaultAuth.guard";
+import * as common from "@nestjs/common";
+import { AclFilterResponseInterceptor } from "../../interceptors/aclFilterResponse.interceptor";
+import { AclValidateRequestInterceptor } from "../../interceptors/aclValidateRequest.interceptor";
 import { Holiday } from "./Holiday";
 import { HolidayCountArgs } from "./HolidayCountArgs";
 import { HolidayFindManyArgs } from "./HolidayFindManyArgs";
 import { HolidayFindUniqueArgs } from "./HolidayFindUniqueArgs";
+import { CreateHolidayArgs } from "./CreateHolidayArgs";
+import { UpdateHolidayArgs } from "./UpdateHolidayArgs";
 import { DeleteHolidayArgs } from "./DeleteHolidayArgs";
 import { HolidayService } from "../holiday.service";
+@common.UseGuards(GqlDefaultAuthGuard, gqlACGuard.GqlACGuard)
 @graphql.Resolver(() => Holiday)
 export class HolidayResolverBase {
-  constructor(protected readonly service: HolidayService) {}
+  constructor(
+    protected readonly service: HolidayService,
+    protected readonly rolesBuilder: nestAccessControl.RolesBuilder
+  ) {}
 
+  @graphql.Query(() => MetaQueryPayload)
+  @nestAccessControl.UseRoles({
+    resource: "Holiday",
+    action: "read",
+    possession: "any",
+  })
   async _holidaysMeta(
     @graphql.Args() args: HolidayCountArgs
   ): Promise<MetaQueryPayload> {
@@ -32,14 +50,26 @@ export class HolidayResolverBase {
     };
   }
 
+  @common.UseInterceptors(AclFilterResponseInterceptor)
   @graphql.Query(() => [Holiday])
+  @nestAccessControl.UseRoles({
+    resource: "Holiday",
+    action: "read",
+    possession: "any",
+  })
   async holidays(
     @graphql.Args() args: HolidayFindManyArgs
   ): Promise<Holiday[]> {
     return this.service.holidays(args);
   }
 
+  @common.UseInterceptors(AclFilterResponseInterceptor)
   @graphql.Query(() => Holiday, { nullable: true })
+  @nestAccessControl.UseRoles({
+    resource: "Holiday",
+    action: "read",
+    possession: "own",
+  })
   async holiday(
     @graphql.Args() args: HolidayFindUniqueArgs
   ): Promise<Holiday | null> {
@@ -50,7 +80,53 @@ export class HolidayResolverBase {
     return result;
   }
 
+  @common.UseInterceptors(AclValidateRequestInterceptor)
   @graphql.Mutation(() => Holiday)
+  @nestAccessControl.UseRoles({
+    resource: "Holiday",
+    action: "create",
+    possession: "any",
+  })
+  async createHoliday(
+    @graphql.Args() args: CreateHolidayArgs
+  ): Promise<Holiday> {
+    return await this.service.createHoliday({
+      ...args,
+      data: args.data,
+    });
+  }
+
+  @common.UseInterceptors(AclValidateRequestInterceptor)
+  @graphql.Mutation(() => Holiday)
+  @nestAccessControl.UseRoles({
+    resource: "Holiday",
+    action: "update",
+    possession: "any",
+  })
+  async updateHoliday(
+    @graphql.Args() args: UpdateHolidayArgs
+  ): Promise<Holiday | null> {
+    try {
+      return await this.service.updateHoliday({
+        ...args,
+        data: args.data,
+      });
+    } catch (error) {
+      if (isRecordNotFoundError(error)) {
+        throw new GraphQLError(
+          `No resource was found for ${JSON.stringify(args.where)}`
+        );
+      }
+      throw error;
+    }
+  }
+
+  @graphql.Mutation(() => Holiday)
+  @nestAccessControl.UseRoles({
+    resource: "Holiday",
+    action: "delete",
+    possession: "any",
+  })
   async deleteHoliday(
     @graphql.Args() args: DeleteHolidayArgs
   ): Promise<Holiday | null> {

@@ -13,7 +13,10 @@ import { InputType, Field } from "@nestjs/graphql";
 import { ApiProperty } from "@nestjs/swagger";
 import { StringFilter } from "../../util/StringFilter";
 import { Type } from "class-transformer";
-import { IsOptional } from "class-validator";
+import { IsOptional, ValidateNested } from "class-validator";
+import { StringNullableFilter } from "../../util/StringNullableFilter";
+import { FloatNullableFilter } from "../../util/FloatNullableFilter";
+import { PayrollListRelationFilter } from "../../payroll/base/PayrollListRelationFilter";
 
 @InputType()
 class EmployeeWhereInput {
@@ -27,6 +30,51 @@ class EmployeeWhereInput {
     nullable: true,
   })
   id?: StringFilter;
+
+  @ApiProperty({
+    required: false,
+    type: StringNullableFilter,
+  })
+  @Type(() => StringNullableFilter)
+  @IsOptional()
+  @Field(() => StringNullableFilter, {
+    nullable: true,
+  })
+  name?: StringNullableFilter;
+
+  @ApiProperty({
+    required: false,
+    type: StringNullableFilter,
+  })
+  @Type(() => StringNullableFilter)
+  @IsOptional()
+  @Field(() => StringNullableFilter, {
+    nullable: true,
+  })
+  position?: StringNullableFilter;
+
+  @ApiProperty({
+    required: false,
+    type: FloatNullableFilter,
+  })
+  @Type(() => FloatNullableFilter)
+  @IsOptional()
+  @Field(() => FloatNullableFilter, {
+    nullable: true,
+  })
+  salaryDetails?: FloatNullableFilter;
+
+  @ApiProperty({
+    required: false,
+    type: () => PayrollListRelationFilter,
+  })
+  @ValidateNested()
+  @Type(() => PayrollListRelationFilter)
+  @IsOptional()
+  @Field(() => PayrollListRelationFilter, {
+    nullable: true,
+  })
+  payrolls?: PayrollListRelationFilter;
 }
 
 export { EmployeeWhereInput as EmployeeWhereInput };

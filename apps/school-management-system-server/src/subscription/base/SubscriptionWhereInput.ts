@@ -13,7 +13,10 @@ import { InputType, Field } from "@nestjs/graphql";
 import { ApiProperty } from "@nestjs/swagger";
 import { StringFilter } from "../../util/StringFilter";
 import { Type } from "class-transformer";
-import { IsOptional } from "class-validator";
+import { IsOptional, IsEnum, ValidateNested } from "class-validator";
+import { EnumSubscriptionPackageField } from "./EnumSubscriptionPackageField";
+import { DateTimeNullableFilter } from "../../util/DateTimeNullableFilter";
+import { SchoolWhereUniqueInput } from "../../school/base/SchoolWhereUniqueInput";
 
 @InputType()
 class SubscriptionWhereInput {
@@ -27,6 +30,40 @@ class SubscriptionWhereInput {
     nullable: true,
   })
   id?: StringFilter;
+
+  @ApiProperty({
+    required: false,
+    enum: EnumSubscriptionPackageField,
+  })
+  @IsEnum(EnumSubscriptionPackageField)
+  @IsOptional()
+  @Field(() => EnumSubscriptionPackageField, {
+    nullable: true,
+  })
+  packageField?: "Option1";
+
+  @ApiProperty({
+    required: false,
+    type: DateTimeNullableFilter,
+  })
+  @Type(() => DateTimeNullableFilter)
+  @IsOptional()
+  @Field(() => DateTimeNullableFilter, {
+    nullable: true,
+  })
+  expirationDate?: DateTimeNullableFilter;
+
+  @ApiProperty({
+    required: false,
+    type: () => SchoolWhereUniqueInput,
+  })
+  @ValidateNested()
+  @Type(() => SchoolWhereUniqueInput)
+  @IsOptional()
+  @Field(() => SchoolWhereUniqueInput, {
+    nullable: true,
+  })
+  school?: SchoolWhereUniqueInput;
 }
 
 export { SubscriptionWhereInput as SubscriptionWhereInput };

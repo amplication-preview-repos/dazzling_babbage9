@@ -9,5 +9,48 @@ https://docs.amplication.com/how-to/custom-code
 
 ------------------------------------------------------------------------------
   */
-class SubscriptionUpdateInput {}
+import { InputType, Field } from "@nestjs/graphql";
+import { ApiProperty } from "@nestjs/swagger";
+import { EnumSubscriptionPackageField } from "./EnumSubscriptionPackageField";
+import { IsEnum, IsOptional, IsDate, ValidateNested } from "class-validator";
+import { Type } from "class-transformer";
+import { SchoolWhereUniqueInput } from "../../school/base/SchoolWhereUniqueInput";
+
+@InputType()
+class SubscriptionUpdateInput {
+  @ApiProperty({
+    required: false,
+    enum: EnumSubscriptionPackageField,
+  })
+  @IsEnum(EnumSubscriptionPackageField)
+  @IsOptional()
+  @Field(() => EnumSubscriptionPackageField, {
+    nullable: true,
+  })
+  packageField?: "Option1" | null;
+
+  @ApiProperty({
+    required: false,
+  })
+  @IsDate()
+  @Type(() => Date)
+  @IsOptional()
+  @Field(() => Date, {
+    nullable: true,
+  })
+  expirationDate?: Date | null;
+
+  @ApiProperty({
+    required: false,
+    type: () => SchoolWhereUniqueInput,
+  })
+  @ValidateNested()
+  @Type(() => SchoolWhereUniqueInput)
+  @IsOptional()
+  @Field(() => SchoolWhereUniqueInput, {
+    nullable: true,
+  })
+  school?: SchoolWhereUniqueInput | null;
+}
+
 export { SubscriptionUpdateInput as SubscriptionUpdateInput };

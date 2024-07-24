@@ -16,17 +16,38 @@ import * as errors from "../../errors";
 import { Request } from "express";
 import { plainToClass } from "class-transformer";
 import { ApiNestedQuery } from "../../decorators/api-nested-query.decorator";
+import * as nestAccessControl from "nest-access-control";
+import * as defaultAuthGuard from "../../auth/defaultAuth.guard";
 import { EmployeeService } from "../employee.service";
+import { AclValidateRequestInterceptor } from "../../interceptors/aclValidateRequest.interceptor";
+import { AclFilterResponseInterceptor } from "../../interceptors/aclFilterResponse.interceptor";
 import { EmployeeCreateInput } from "./EmployeeCreateInput";
 import { Employee } from "./Employee";
 import { EmployeeFindManyArgs } from "./EmployeeFindManyArgs";
 import { EmployeeWhereUniqueInput } from "./EmployeeWhereUniqueInput";
 import { EmployeeUpdateInput } from "./EmployeeUpdateInput";
+import { PayrollFindManyArgs } from "../../payroll/base/PayrollFindManyArgs";
+import { Payroll } from "../../payroll/base/Payroll";
+import { PayrollWhereUniqueInput } from "../../payroll/base/PayrollWhereUniqueInput";
 
+@swagger.ApiBearerAuth()
+@common.UseGuards(defaultAuthGuard.DefaultAuthGuard, nestAccessControl.ACGuard)
 export class EmployeeControllerBase {
-  constructor(protected readonly service: EmployeeService) {}
+  constructor(
+    protected readonly service: EmployeeService,
+    protected readonly rolesBuilder: nestAccessControl.RolesBuilder
+  ) {}
+  @common.UseInterceptors(AclValidateRequestInterceptor)
   @common.Post()
   @swagger.ApiCreatedResponse({ type: Employee })
+  @nestAccessControl.UseRoles({
+    resource: "Employee",
+    action: "create",
+    possession: "any",
+  })
+  @swagger.ApiForbiddenResponse({
+    type: errors.ForbiddenException,
+  })
   async createEmployee(
     @common.Body() data: EmployeeCreateInput
   ): Promise<Employee> {
@@ -36,13 +57,25 @@ export class EmployeeControllerBase {
         id: true,
         createdAt: true,
         updatedAt: true,
+        name: true,
+        position: true,
+        salaryDetails: true,
       },
     });
   }
 
+  @common.UseInterceptors(AclFilterResponseInterceptor)
   @common.Get()
   @swagger.ApiOkResponse({ type: [Employee] })
   @ApiNestedQuery(EmployeeFindManyArgs)
+  @nestAccessControl.UseRoles({
+    resource: "Employee",
+    action: "read",
+    possession: "any",
+  })
+  @swagger.ApiForbiddenResponse({
+    type: errors.ForbiddenException,
+  })
   async employees(@common.Req() request: Request): Promise<Employee[]> {
     const args = plainToClass(EmployeeFindManyArgs, request.query);
     return this.service.employees({
@@ -51,13 +84,25 @@ export class EmployeeControllerBase {
         id: true,
         createdAt: true,
         updatedAt: true,
+        name: true,
+        position: true,
+        salaryDetails: true,
       },
     });
   }
 
+  @common.UseInterceptors(AclFilterResponseInterceptor)
   @common.Get("/:id")
   @swagger.ApiOkResponse({ type: Employee })
   @swagger.ApiNotFoundResponse({ type: errors.NotFoundException })
+  @nestAccessControl.UseRoles({
+    resource: "Employee",
+    action: "read",
+    possession: "own",
+  })
+  @swagger.ApiForbiddenResponse({
+    type: errors.ForbiddenException,
+  })
   async employee(
     @common.Param() params: EmployeeWhereUniqueInput
   ): Promise<Employee | null> {
@@ -67,6 +112,9 @@ export class EmployeeControllerBase {
         id: true,
         createdAt: true,
         updatedAt: true,
+        name: true,
+        position: true,
+        salaryDetails: true,
       },
     });
     if (result === null) {
@@ -77,9 +125,18 @@ export class EmployeeControllerBase {
     return result;
   }
 
+  @common.UseInterceptors(AclValidateRequestInterceptor)
   @common.Patch("/:id")
   @swagger.ApiOkResponse({ type: Employee })
   @swagger.ApiNotFoundResponse({ type: errors.NotFoundException })
+  @nestAccessControl.UseRoles({
+    resource: "Employee",
+    action: "update",
+    possession: "any",
+  })
+  @swagger.ApiForbiddenResponse({
+    type: errors.ForbiddenException,
+  })
   async updateEmployee(
     @common.Param() params: EmployeeWhereUniqueInput,
     @common.Body() data: EmployeeUpdateInput
@@ -92,6 +149,9 @@ export class EmployeeControllerBase {
           id: true,
           createdAt: true,
           updatedAt: true,
+          name: true,
+          position: true,
+          salaryDetails: true,
         },
       });
     } catch (error) {
@@ -107,6 +167,14 @@ export class EmployeeControllerBase {
   @common.Delete("/:id")
   @swagger.ApiOkResponse({ type: Employee })
   @swagger.ApiNotFoundResponse({ type: errors.NotFoundException })
+  @nestAccessControl.UseRoles({
+    resource: "Employee",
+    action: "delete",
+    possession: "any",
+  })
+  @swagger.ApiForbiddenResponse({
+    type: errors.ForbiddenException,
+  })
   async deleteEmployee(
     @common.Param() params: EmployeeWhereUniqueInput
   ): Promise<Employee | null> {
@@ -117,6 +185,9 @@ export class EmployeeControllerBase {
           id: true,
           createdAt: true,
           updatedAt: true,
+          name: true,
+          position: true,
+          salaryDetails: true,
         },
       });
     } catch (error) {
@@ -127,5 +198,110 @@ export class EmployeeControllerBase {
       }
       throw error;
     }
+  }
+
+  @common.UseInterceptors(AclFilterResponseInterceptor)
+  @common.Get("/:id/payrolls")
+  @ApiNestedQuery(PayrollFindManyArgs)
+  @nestAccessControl.UseRoles({
+    resource: "Payroll",
+    action: "read",
+    possession: "any",
+  })
+  async findPayrolls(
+    @common.Req() request: Request,
+    @common.Param() params: EmployeeWhereUniqueInput
+  ): Promise<Payroll[]> {
+    const query = plainToClass(PayrollFindManyArgs, request.query);
+    const results = await this.service.findPayrolls(params.id, {
+      ...query,
+      select: {
+        id: true,
+        createdAt: true,
+        updatedAt: true,
+        baseSalary: true,
+        allowances: true,
+        deductions: true,
+        netSalary: true,
+
+        employee: {
+          select: {
+            id: true,
+          },
+        },
+      },
+    });
+    if (results === null) {
+      throw new errors.NotFoundException(
+        `No resource was found for ${JSON.stringify(params)}`
+      );
+    }
+    return results;
+  }
+
+  @common.Post("/:id/payrolls")
+  @nestAccessControl.UseRoles({
+    resource: "Employee",
+    action: "update",
+    possession: "any",
+  })
+  async connectPayrolls(
+    @common.Param() params: EmployeeWhereUniqueInput,
+    @common.Body() body: PayrollWhereUniqueInput[]
+  ): Promise<void> {
+    const data = {
+      payrolls: {
+        connect: body,
+      },
+    };
+    await this.service.updateEmployee({
+      where: params,
+      data,
+      select: { id: true },
+    });
+  }
+
+  @common.Patch("/:id/payrolls")
+  @nestAccessControl.UseRoles({
+    resource: "Employee",
+    action: "update",
+    possession: "any",
+  })
+  async updatePayrolls(
+    @common.Param() params: EmployeeWhereUniqueInput,
+    @common.Body() body: PayrollWhereUniqueInput[]
+  ): Promise<void> {
+    const data = {
+      payrolls: {
+        set: body,
+      },
+    };
+    await this.service.updateEmployee({
+      where: params,
+      data,
+      select: { id: true },
+    });
+  }
+
+  @common.Delete("/:id/payrolls")
+  @nestAccessControl.UseRoles({
+    resource: "Employee",
+    action: "update",
+    possession: "any",
+  })
+  async disconnectPayrolls(
+    @common.Param() params: EmployeeWhereUniqueInput,
+    @common.Body() body: PayrollWhereUniqueInput[]
+  ): Promise<void> {
+    const data = {
+      payrolls: {
+        disconnect: body,
+      },
+    };
+    await this.service.updateEmployee({
+      where: params,
+      data,
+      select: { id: true },
+    });
   }
 }

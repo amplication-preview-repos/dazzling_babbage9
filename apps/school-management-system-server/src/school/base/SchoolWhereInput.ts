@@ -13,7 +13,12 @@ import { InputType, Field } from "@nestjs/graphql";
 import { ApiProperty } from "@nestjs/swagger";
 import { StringFilter } from "../../util/StringFilter";
 import { Type } from "class-transformer";
-import { IsOptional } from "class-validator";
+import { IsOptional, IsEnum, ValidateNested } from "class-validator";
+import { StringNullableFilter } from "../../util/StringNullableFilter";
+import { EnumSchoolHolidaysCalculation } from "./EnumSchoolHolidaysCalculation";
+import { JsonFilter } from "../../util/JsonFilter";
+import { EnumSchoolDeductionsFrom } from "./EnumSchoolDeductionsFrom";
+import { SubscriptionListRelationFilter } from "../../subscription/base/SubscriptionListRelationFilter";
 
 @InputType()
 class SchoolWhereInput {
@@ -27,6 +32,84 @@ class SchoolWhereInput {
     nullable: true,
   })
   id?: StringFilter;
+
+  @ApiProperty({
+    required: false,
+    type: StringNullableFilter,
+  })
+  @Type(() => StringNullableFilter)
+  @IsOptional()
+  @Field(() => StringNullableFilter, {
+    nullable: true,
+  })
+  name?: StringNullableFilter;
+
+  @ApiProperty({
+    required: false,
+    enum: EnumSchoolHolidaysCalculation,
+  })
+  @IsEnum(EnumSchoolHolidaysCalculation)
+  @IsOptional()
+  @Field(() => EnumSchoolHolidaysCalculation, {
+    nullable: true,
+  })
+  holidaysCalculation?: "Option1";
+
+  @ApiProperty({
+    required: false,
+    type: JsonFilter,
+  })
+  @Type(() => JsonFilter)
+  @IsOptional()
+  @Field(() => JsonFilter, {
+    nullable: true,
+  })
+  styles?: JsonFilter;
+
+  @ApiProperty({
+    required: false,
+    type: StringNullableFilter,
+  })
+  @Type(() => StringNullableFilter)
+  @IsOptional()
+  @Field(() => StringNullableFilter, {
+    nullable: true,
+  })
+  address?: StringNullableFilter;
+
+  @ApiProperty({
+    required: false,
+    type: StringNullableFilter,
+  })
+  @Type(() => StringNullableFilter)
+  @IsOptional()
+  @Field(() => StringNullableFilter, {
+    nullable: true,
+  })
+  contactDetails?: StringNullableFilter;
+
+  @ApiProperty({
+    required: false,
+    enum: EnumSchoolDeductionsFrom,
+  })
+  @IsEnum(EnumSchoolDeductionsFrom)
+  @IsOptional()
+  @Field(() => EnumSchoolDeductionsFrom, {
+    nullable: true,
+  })
+  deductionsFrom?: "Option1";
+
+  @ApiProperty({
+    required: false,
+    type: () => SubscriptionListRelationFilter,
+  })
+  @ValidateNested()
+  @Type(() => SubscriptionListRelationFilter)
+  @IsOptional()
+  @Field(() => SubscriptionListRelationFilter, {
+    nullable: true,
+  })
+  subscriptions?: SubscriptionListRelationFilter;
 }
 
 export { SchoolWhereInput as SchoolWhereInput };

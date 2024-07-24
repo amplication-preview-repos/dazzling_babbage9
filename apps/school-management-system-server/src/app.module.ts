@@ -1,32 +1,41 @@
 import { Module } from "@nestjs/common";
-import { SubscriptionModule } from "./subscription/subscription.module";
 import { EmployeeModule } from "./employee/employee.module";
 import { StudentModule } from "./student/student.module";
 import { SchoolModule } from "./school/school.module";
+import { SubscriptionModule } from "./subscription/subscription.module";
 import { PayrollModule } from "./payroll/payroll.module";
-import { HolidayModule } from "./holiday/holiday.module";
 import { FeeModule } from "./fee/fee.module";
+import { HolidayModule } from "./holiday/holiday.module";
 import { UserModule } from "./user/user.module";
+import { SettingsModule } from "./Settings/settings.module";
 import { HealthModule } from "./health/health.module";
 import { PrismaModule } from "./prisma/prisma.module";
 import { SecretsManagerModule } from "./providers/secrets/secretsManager.module";
+import { StorageModule } from "./storage/storage.module";
 import { ServeStaticModule } from "@nestjs/serve-static";
 import { ServeStaticOptionsService } from "./serveStaticOptions.service";
 import { ConfigModule, ConfigService } from "@nestjs/config";
 import { GraphQLModule } from "@nestjs/graphql";
 import { ApolloDriver, ApolloDriverConfig } from "@nestjs/apollo";
 
+import { ACLModule } from "./auth/acl.module";
+import { AuthModule } from "./auth/auth.module";
+
 @Module({
   controllers: [],
   imports: [
-    SubscriptionModule,
+    StorageModule,
+    ACLModule,
+    AuthModule,
     EmployeeModule,
     StudentModule,
     SchoolModule,
+    SubscriptionModule,
     PayrollModule,
-    HolidayModule,
     FeeModule,
+    HolidayModule,
     UserModule,
+    SettingsModule,
     HealthModule,
     PrismaModule,
     SecretsManagerModule,

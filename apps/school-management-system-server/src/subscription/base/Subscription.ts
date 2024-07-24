@@ -11,8 +11,16 @@ https://docs.amplication.com/how-to/custom-code
   */
 import { ObjectType, Field } from "@nestjs/graphql";
 import { ApiProperty } from "@nestjs/swagger";
-import { IsString, IsDate } from "class-validator";
+import {
+  IsString,
+  IsDate,
+  IsEnum,
+  IsOptional,
+  ValidateNested,
+} from "class-validator";
 import { Type } from "class-transformer";
+import { EnumSubscriptionPackageField } from "./EnumSubscriptionPackageField";
+import { School } from "../../school/base/School";
 
 @ObjectType()
 class Subscription {
@@ -39,6 +47,37 @@ class Subscription {
   @Type(() => Date)
   @Field(() => Date)
   updatedAt!: Date;
+
+  @ApiProperty({
+    required: false,
+    enum: EnumSubscriptionPackageField,
+  })
+  @IsEnum(EnumSubscriptionPackageField)
+  @IsOptional()
+  @Field(() => EnumSubscriptionPackageField, {
+    nullable: true,
+  })
+  packageField?: "Option1" | null;
+
+  @ApiProperty({
+    required: false,
+  })
+  @IsDate()
+  @Type(() => Date)
+  @IsOptional()
+  @Field(() => Date, {
+    nullable: true,
+  })
+  expirationDate!: Date | null;
+
+  @ApiProperty({
+    required: false,
+    type: () => School,
+  })
+  @ValidateNested()
+  @Type(() => School)
+  @IsOptional()
+  school?: School | null;
 }
 
 export { Subscription as Subscription };

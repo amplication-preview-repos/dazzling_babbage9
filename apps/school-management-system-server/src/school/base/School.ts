@@ -11,8 +11,22 @@ https://docs.amplication.com/how-to/custom-code
   */
 import { ObjectType, Field } from "@nestjs/graphql";
 import { ApiProperty } from "@nestjs/swagger";
-import { IsString, IsDate } from "class-validator";
+import {
+  IsString,
+  IsDate,
+  MaxLength,
+  IsOptional,
+  IsEnum,
+  ValidateNested,
+} from "class-validator";
 import { Type } from "class-transformer";
+import { EnumSchoolWeekendDays } from "./EnumSchoolWeekendDays";
+import { EnumSchoolHolidaysCalculation } from "./EnumSchoolHolidaysCalculation";
+import { IsJSONValue } from "../../validators";
+import { GraphQLJSON } from "graphql-type-json";
+import { JsonValue } from "type-fest";
+import { EnumSchoolDeductionsFrom } from "./EnumSchoolDeductionsFrom";
+import { Subscription } from "../../subscription/base/Subscription";
 
 @ObjectType()
 class School {
@@ -39,6 +53,97 @@ class School {
   @Type(() => Date)
   @Field(() => Date)
   updatedAt!: Date;
+
+  @ApiProperty({
+    required: false,
+    type: String,
+  })
+  @IsString()
+  @MaxLength(1000)
+  @IsOptional()
+  @Field(() => String, {
+    nullable: true,
+  })
+  name!: string | null;
+
+  @ApiProperty({
+    required: false,
+    enum: EnumSchoolWeekendDays,
+    isArray: true,
+  })
+  @IsEnum(EnumSchoolWeekendDays, {
+    each: true,
+  })
+  @IsOptional()
+  @Field(() => [EnumSchoolWeekendDays], {
+    nullable: true,
+  })
+  weekendDays?: Array<"Option1">;
+
+  @ApiProperty({
+    required: false,
+    enum: EnumSchoolHolidaysCalculation,
+  })
+  @IsEnum(EnumSchoolHolidaysCalculation)
+  @IsOptional()
+  @Field(() => EnumSchoolHolidaysCalculation, {
+    nullable: true,
+  })
+  holidaysCalculation?: "Option1" | null;
+
+  @ApiProperty({
+    required: false,
+  })
+  @IsJSONValue()
+  @IsOptional()
+  @Field(() => GraphQLJSON, {
+    nullable: true,
+  })
+  styles!: JsonValue;
+
+  @ApiProperty({
+    required: false,
+    type: String,
+  })
+  @IsString()
+  @MaxLength(1000)
+  @IsOptional()
+  @Field(() => String, {
+    nullable: true,
+  })
+  address!: string | null;
+
+  @ApiProperty({
+    required: false,
+    type: String,
+  })
+  @IsString()
+  @MaxLength(1000)
+  @IsOptional()
+  @Field(() => String, {
+    nullable: true,
+  })
+  contactDetails!: string | null;
+
+  @ApiProperty({
+    required: false,
+    enum: EnumSchoolDeductionsFrom,
+  })
+  @IsEnum(EnumSchoolDeductionsFrom)
+  @IsOptional()
+  @Field(() => EnumSchoolDeductionsFrom, {
+    nullable: true,
+  })
+  deductionsFrom?: "Option1" | null;
+
+  @ApiProperty({
+    required: false,
+    type: () => [Subscription],
+  })
+  @ValidateNested()
+  @Type(() => Subscription)
+  @IsOptional()
+  subscriptions?: Array<Subscription>;
 }
 
 export { School as School };

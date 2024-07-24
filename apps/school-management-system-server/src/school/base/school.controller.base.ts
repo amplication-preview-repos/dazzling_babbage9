@@ -16,17 +16,38 @@ import * as errors from "../../errors";
 import { Request } from "express";
 import { plainToClass } from "class-transformer";
 import { ApiNestedQuery } from "../../decorators/api-nested-query.decorator";
+import * as nestAccessControl from "nest-access-control";
+import * as defaultAuthGuard from "../../auth/defaultAuth.guard";
 import { SchoolService } from "../school.service";
+import { AclValidateRequestInterceptor } from "../../interceptors/aclValidateRequest.interceptor";
+import { AclFilterResponseInterceptor } from "../../interceptors/aclFilterResponse.interceptor";
 import { SchoolCreateInput } from "./SchoolCreateInput";
 import { School } from "./School";
 import { SchoolFindManyArgs } from "./SchoolFindManyArgs";
 import { SchoolWhereUniqueInput } from "./SchoolWhereUniqueInput";
 import { SchoolUpdateInput } from "./SchoolUpdateInput";
+import { SubscriptionFindManyArgs } from "../../subscription/base/SubscriptionFindManyArgs";
+import { Subscription } from "../../subscription/base/Subscription";
+import { SubscriptionWhereUniqueInput } from "../../subscription/base/SubscriptionWhereUniqueInput";
 
+@swagger.ApiBearerAuth()
+@common.UseGuards(defaultAuthGuard.DefaultAuthGuard, nestAccessControl.ACGuard)
 export class SchoolControllerBase {
-  constructor(protected readonly service: SchoolService) {}
+  constructor(
+    protected readonly service: SchoolService,
+    protected readonly rolesBuilder: nestAccessControl.RolesBuilder
+  ) {}
+  @common.UseInterceptors(AclValidateRequestInterceptor)
   @common.Post()
   @swagger.ApiCreatedResponse({ type: School })
+  @nestAccessControl.UseRoles({
+    resource: "School",
+    action: "create",
+    possession: "any",
+  })
+  @swagger.ApiForbiddenResponse({
+    type: errors.ForbiddenException,
+  })
   async createSchool(@common.Body() data: SchoolCreateInput): Promise<School> {
     return await this.service.createSchool({
       data: data,
@@ -34,13 +55,29 @@ export class SchoolControllerBase {
         id: true,
         createdAt: true,
         updatedAt: true,
+        name: true,
+        weekendDays: true,
+        holidaysCalculation: true,
+        styles: true,
+        address: true,
+        contactDetails: true,
+        deductionsFrom: true,
       },
     });
   }
 
+  @common.UseInterceptors(AclFilterResponseInterceptor)
   @common.Get()
   @swagger.ApiOkResponse({ type: [School] })
   @ApiNestedQuery(SchoolFindManyArgs)
+  @nestAccessControl.UseRoles({
+    resource: "School",
+    action: "read",
+    possession: "any",
+  })
+  @swagger.ApiForbiddenResponse({
+    type: errors.ForbiddenException,
+  })
   async schools(@common.Req() request: Request): Promise<School[]> {
     const args = plainToClass(SchoolFindManyArgs, request.query);
     return this.service.schools({
@@ -49,13 +86,29 @@ export class SchoolControllerBase {
         id: true,
         createdAt: true,
         updatedAt: true,
+        name: true,
+        weekendDays: true,
+        holidaysCalculation: true,
+        styles: true,
+        address: true,
+        contactDetails: true,
+        deductionsFrom: true,
       },
     });
   }
 
+  @common.UseInterceptors(AclFilterResponseInterceptor)
   @common.Get("/:id")
   @swagger.ApiOkResponse({ type: School })
   @swagger.ApiNotFoundResponse({ type: errors.NotFoundException })
+  @nestAccessControl.UseRoles({
+    resource: "School",
+    action: "read",
+    possession: "own",
+  })
+  @swagger.ApiForbiddenResponse({
+    type: errors.ForbiddenException,
+  })
   async school(
     @common.Param() params: SchoolWhereUniqueInput
   ): Promise<School | null> {
@@ -65,6 +118,13 @@ export class SchoolControllerBase {
         id: true,
         createdAt: true,
         updatedAt: true,
+        name: true,
+        weekendDays: true,
+        holidaysCalculation: true,
+        styles: true,
+        address: true,
+        contactDetails: true,
+        deductionsFrom: true,
       },
     });
     if (result === null) {
@@ -75,9 +135,18 @@ export class SchoolControllerBase {
     return result;
   }
 
+  @common.UseInterceptors(AclValidateRequestInterceptor)
   @common.Patch("/:id")
   @swagger.ApiOkResponse({ type: School })
   @swagger.ApiNotFoundResponse({ type: errors.NotFoundException })
+  @nestAccessControl.UseRoles({
+    resource: "School",
+    action: "update",
+    possession: "any",
+  })
+  @swagger.ApiForbiddenResponse({
+    type: errors.ForbiddenException,
+  })
   async updateSchool(
     @common.Param() params: SchoolWhereUniqueInput,
     @common.Body() data: SchoolUpdateInput
@@ -90,6 +159,13 @@ export class SchoolControllerBase {
           id: true,
           createdAt: true,
           updatedAt: true,
+          name: true,
+          weekendDays: true,
+          holidaysCalculation: true,
+          styles: true,
+          address: true,
+          contactDetails: true,
+          deductionsFrom: true,
         },
       });
     } catch (error) {
@@ -105,6 +181,14 @@ export class SchoolControllerBase {
   @common.Delete("/:id")
   @swagger.ApiOkResponse({ type: School })
   @swagger.ApiNotFoundResponse({ type: errors.NotFoundException })
+  @nestAccessControl.UseRoles({
+    resource: "School",
+    action: "delete",
+    possession: "any",
+  })
+  @swagger.ApiForbiddenResponse({
+    type: errors.ForbiddenException,
+  })
   async deleteSchool(
     @common.Param() params: SchoolWhereUniqueInput
   ): Promise<School | null> {
@@ -115,6 +199,13 @@ export class SchoolControllerBase {
           id: true,
           createdAt: true,
           updatedAt: true,
+          name: true,
+          weekendDays: true,
+          holidaysCalculation: true,
+          styles: true,
+          address: true,
+          contactDetails: true,
+          deductionsFrom: true,
         },
       });
     } catch (error) {
@@ -125,5 +216,108 @@ export class SchoolControllerBase {
       }
       throw error;
     }
+  }
+
+  @common.UseInterceptors(AclFilterResponseInterceptor)
+  @common.Get("/:id/subscriptions")
+  @ApiNestedQuery(SubscriptionFindManyArgs)
+  @nestAccessControl.UseRoles({
+    resource: "Subscription",
+    action: "read",
+    possession: "any",
+  })
+  async findSubscriptions(
+    @common.Req() request: Request,
+    @common.Param() params: SchoolWhereUniqueInput
+  ): Promise<Subscription[]> {
+    const query = plainToClass(SubscriptionFindManyArgs, request.query);
+    const results = await this.service.findSubscriptions(params.id, {
+      ...query,
+      select: {
+        id: true,
+        createdAt: true,
+        updatedAt: true,
+        packageField: true,
+        expirationDate: true,
+
+        school: {
+          select: {
+            id: true,
+          },
+        },
+      },
+    });
+    if (results === null) {
+      throw new errors.NotFoundException(
+        `No resource was found for ${JSON.stringify(params)}`
+      );
+    }
+    return results;
+  }
+
+  @common.Post("/:id/subscriptions")
+  @nestAccessControl.UseRoles({
+    resource: "School",
+    action: "update",
+    possession: "any",
+  })
+  async connectSubscriptions(
+    @common.Param() params: SchoolWhereUniqueInput,
+    @common.Body() body: SubscriptionWhereUniqueInput[]
+  ): Promise<void> {
+    const data = {
+      subscriptions: {
+        connect: body,
+      },
+    };
+    await this.service.updateSchool({
+      where: params,
+      data,
+      select: { id: true },
+    });
+  }
+
+  @common.Patch("/:id/subscriptions")
+  @nestAccessControl.UseRoles({
+    resource: "School",
+    action: "update",
+    possession: "any",
+  })
+  async updateSubscriptions(
+    @common.Param() params: SchoolWhereUniqueInput,
+    @common.Body() body: SubscriptionWhereUniqueInput[]
+  ): Promise<void> {
+    const data = {
+      subscriptions: {
+        set: body,
+      },
+    };
+    await this.service.updateSchool({
+      where: params,
+      data,
+      select: { id: true },
+    });
+  }
+
+  @common.Delete("/:id/subscriptions")
+  @nestAccessControl.UseRoles({
+    resource: "School",
+    action: "update",
+    possession: "any",
+  })
+  async disconnectSubscriptions(
+    @common.Param() params: SchoolWhereUniqueInput,
+    @common.Body() body: SubscriptionWhereUniqueInput[]
+  ): Promise<void> {
+    const data = {
+      subscriptions: {
+        disconnect: body,
+      },
+    };
+    await this.service.updateSchool({
+      where: params,
+      data,
+      select: { id: true },
+    });
   }
 }

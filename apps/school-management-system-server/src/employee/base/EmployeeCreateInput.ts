@@ -9,5 +9,70 @@ https://docs.amplication.com/how-to/custom-code
 
 ------------------------------------------------------------------------------
   */
-class EmployeeCreateInput {}
+import { InputType, Field } from "@nestjs/graphql";
+import { ApiProperty } from "@nestjs/swagger";
+import {
+  IsString,
+  MaxLength,
+  IsOptional,
+  IsNumber,
+  Min,
+  Max,
+  ValidateNested,
+} from "class-validator";
+import { PayrollCreateNestedManyWithoutEmployeesInput } from "./PayrollCreateNestedManyWithoutEmployeesInput";
+import { Type } from "class-transformer";
+
+@InputType()
+class EmployeeCreateInput {
+  @ApiProperty({
+    required: false,
+    type: String,
+  })
+  @IsString()
+  @MaxLength(1000)
+  @IsOptional()
+  @Field(() => String, {
+    nullable: true,
+  })
+  name?: string | null;
+
+  @ApiProperty({
+    required: false,
+    type: String,
+  })
+  @IsString()
+  @MaxLength(1000)
+  @IsOptional()
+  @Field(() => String, {
+    nullable: true,
+  })
+  position?: string | null;
+
+  @ApiProperty({
+    required: false,
+    type: Number,
+  })
+  @IsNumber()
+  @Min(-999999999)
+  @Max(999999999)
+  @IsOptional()
+  @Field(() => Number, {
+    nullable: true,
+  })
+  salaryDetails?: number | null;
+
+  @ApiProperty({
+    required: false,
+    type: () => PayrollCreateNestedManyWithoutEmployeesInput,
+  })
+  @ValidateNested()
+  @Type(() => PayrollCreateNestedManyWithoutEmployeesInput)
+  @IsOptional()
+  @Field(() => PayrollCreateNestedManyWithoutEmployeesInput, {
+    nullable: true,
+  })
+  payrolls?: PayrollCreateNestedManyWithoutEmployeesInput;
+}
+
 export { EmployeeCreateInput as EmployeeCreateInput };

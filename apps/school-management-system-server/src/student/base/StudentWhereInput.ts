@@ -13,7 +13,9 @@ import { InputType, Field } from "@nestjs/graphql";
 import { ApiProperty } from "@nestjs/swagger";
 import { StringFilter } from "../../util/StringFilter";
 import { Type } from "class-transformer";
-import { IsOptional } from "class-validator";
+import { IsOptional, ValidateNested } from "class-validator";
+import { JsonFilter } from "../../util/JsonFilter";
+import { FeeListRelationFilter } from "../../fee/base/FeeListRelationFilter";
 
 @InputType()
 class StudentWhereInput {
@@ -27,6 +29,51 @@ class StudentWhereInput {
     nullable: true,
   })
   id?: StringFilter;
+
+  @ApiProperty({
+    required: false,
+    type: JsonFilter,
+  })
+  @Type(() => JsonFilter)
+  @IsOptional()
+  @Field(() => JsonFilter, {
+    nullable: true,
+  })
+  customProfile?: JsonFilter;
+
+  @ApiProperty({
+    required: false,
+    type: JsonFilter,
+  })
+  @Type(() => JsonFilter)
+  @IsOptional()
+  @Field(() => JsonFilter, {
+    nullable: true,
+  })
+  documents?: JsonFilter;
+
+  @ApiProperty({
+    required: false,
+    type: JsonFilter,
+  })
+  @Type(() => JsonFilter)
+  @IsOptional()
+  @Field(() => JsonFilter, {
+    nullable: true,
+  })
+  photos?: JsonFilter;
+
+  @ApiProperty({
+    required: false,
+    type: () => FeeListRelationFilter,
+  })
+  @ValidateNested()
+  @Type(() => FeeListRelationFilter)
+  @IsOptional()
+  @Field(() => FeeListRelationFilter, {
+    nullable: true,
+  })
+  fees?: FeeListRelationFilter;
 }
 
 export { StudentWhereInput as StudentWhereInput };

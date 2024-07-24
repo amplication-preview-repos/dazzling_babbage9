@@ -10,10 +10,21 @@ https://docs.amplication.com/how-to/custom-code
 ------------------------------------------------------------------------------
   */
 import { PrismaService } from "../../prisma/prisma.service";
-import { Prisma, Student as PrismaStudent } from "@prisma/client";
+import {
+  Prisma,
+  Student as PrismaStudent,
+  Fee as PrismaFee,
+} from "@prisma/client";
+import { LocalStorageService } from "src/storage/providers/local/local.storage.service";
+import { InputJsonValue } from "src/types";
+import { FileDownload, FileUpload } from "src/storage/base/storage.types";
+import { LocalStorageFile } from "src/storage/providers/local/local.storage.types";
 
 export class StudentServiceBase {
-  constructor(protected readonly prisma: PrismaService) {}
+  constructor(
+    protected readonly prisma: PrismaService,
+    protected readonly localStorageService: LocalStorageService
+  ) {}
 
   async count(args: Omit<Prisma.StudentCountArgs, "select">): Promise<number> {
     return this.prisma.student.count(args);
@@ -35,5 +46,128 @@ export class StudentServiceBase {
   }
   async deleteStudent(args: Prisma.StudentDeleteArgs): Promise<PrismaStudent> {
     return this.prisma.student.delete(args);
+  }
+
+  async uploadDocuments<T extends Prisma.StudentFindUniqueArgs>(
+    args: Prisma.SelectSubset<T, Prisma.StudentFindUniqueArgs>,
+    file: FileUpload
+  ): Promise<PrismaStudent> {
+    file.filename = `profilePicture-${args.where.id}.${file.filename
+      .split(".")
+      .pop()}`;
+    const containerPath = "documents";
+    const documents = await this.localStorageService.uploadFile(
+      file,
+      [],
+      1000000,
+      containerPath
+    );
+
+    return await this.prisma.student.update({
+      where: args.where,
+
+      data: {
+        documents: documents as InputJsonValue,
+      },
+    });
+  }
+
+  async downloadDocuments<T extends Prisma.StudentFindUniqueArgs>(
+    args: Prisma.SelectSubset<T, Prisma.StudentFindUniqueArgs>
+  ): Promise<FileDownload> {
+    const { documents } = await this.prisma.student.findUniqueOrThrow({
+      where: args.where,
+    });
+
+    return await this.localStorageService.downloadFile(
+      documents as unknown as LocalStorageFile
+    );
+  }
+
+  async deleteDocuments<T extends Prisma.StudentFindUniqueArgs>(
+    args: Prisma.SelectSubset<T, Prisma.StudentFindUniqueArgs>
+  ): Promise<PrismaStudent> {
+    const { documents } = await this.prisma.student.findUniqueOrThrow({
+      where: args.where,
+    });
+
+    await this.localStorageService.deleteFile(
+      documents as unknown as LocalStorageFile
+    );
+
+    return await this.prisma.student.update({
+      where: args.where,
+
+      data: {
+        documents: Prisma.DbNull,
+      },
+    });
+  }
+
+  async uploadPhotos<T extends Prisma.StudentFindUniqueArgs>(
+    args: Prisma.SelectSubset<T, Prisma.StudentFindUniqueArgs>,
+    file: FileUpload
+  ): Promise<PrismaStudent> {
+    file.filename = `profilePicture-${args.where.id}.${file.filename
+      .split(".")
+      .pop()}`;
+    const containerPath = "photos";
+    const photos = await this.localStorageService.uploadFile(
+      file,
+      [],
+      1000000,
+      containerPath
+    );
+
+    return await this.prisma.student.update({
+      where: args.where,
+
+      data: {
+        photos: photos as InputJsonValue,
+      },
+    });
+  }
+
+  async downloadPhotos<T extends Prisma.StudentFindUniqueArgs>(
+    args: Prisma.SelectSubset<T, Prisma.StudentFindUniqueArgs>
+  ): Promise<FileDownload> {
+    const { photos } = await this.prisma.student.findUniqueOrThrow({
+      where: args.where,
+    });
+
+    return await this.localStorageService.downloadFile(
+      photos as unknown as LocalStorageFile
+    );
+  }
+
+  async deletePhotos<T extends Prisma.StudentFindUniqueArgs>(
+    args: Prisma.SelectSubset<T, Prisma.StudentFindUniqueArgs>
+  ): Promise<PrismaStudent> {
+    const { photos } = await this.prisma.student.findUniqueOrThrow({
+      where: args.where,
+    });
+
+    await this.localStorageService.deleteFile(
+      photos as unknown as LocalStorageFile
+    );
+
+    return await this.prisma.student.update({
+      where: args.where,
+
+      data: {
+        photos: Prisma.DbNull,
+      },
+    });
+  }
+
+  async findFees(
+    parentId: string,
+    args: Prisma.FeeFindManyArgs
+  ): Promise<PrismaFee[]> {
+    return this.prisma.student
+      .findUniqueOrThrow({
+        where: { id: parentId },
+      })
+      .fees(args);
   }
 }

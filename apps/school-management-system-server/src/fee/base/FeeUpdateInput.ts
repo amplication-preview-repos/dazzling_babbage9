@@ -9,5 +9,82 @@ https://docs.amplication.com/how-to/custom-code
 
 ------------------------------------------------------------------------------
   */
-class FeeUpdateInput {}
+import { InputType, Field } from "@nestjs/graphql";
+import { ApiProperty } from "@nestjs/swagger";
+import {
+  IsNumber,
+  Min,
+  Max,
+  IsOptional,
+  IsDate,
+  IsEnum,
+  ValidateNested,
+} from "class-validator";
+import { Type } from "class-transformer";
+import { EnumFeePaymentFrequency } from "./EnumFeePaymentFrequency";
+import { IsJSONValue } from "../../validators";
+import { GraphQLJSON } from "graphql-type-json";
+import { InputJsonValue } from "../../types";
+import { StudentWhereUniqueInput } from "../../student/base/StudentWhereUniqueInput";
+
+@InputType()
+class FeeUpdateInput {
+  @ApiProperty({
+    required: false,
+    type: Number,
+  })
+  @IsNumber()
+  @Min(-999999999)
+  @Max(999999999)
+  @IsOptional()
+  @Field(() => Number, {
+    nullable: true,
+  })
+  amount?: number | null;
+
+  @ApiProperty({
+    required: false,
+  })
+  @IsDate()
+  @Type(() => Date)
+  @IsOptional()
+  @Field(() => Date, {
+    nullable: true,
+  })
+  paymentDate?: Date | null;
+
+  @ApiProperty({
+    required: false,
+    enum: EnumFeePaymentFrequency,
+  })
+  @IsEnum(EnumFeePaymentFrequency)
+  @IsOptional()
+  @Field(() => EnumFeePaymentFrequency, {
+    nullable: true,
+  })
+  paymentFrequency?: "Option1" | null;
+
+  @ApiProperty({
+    required: false,
+  })
+  @IsJSONValue()
+  @IsOptional()
+  @Field(() => GraphQLJSON, {
+    nullable: true,
+  })
+  installments?: InputJsonValue;
+
+  @ApiProperty({
+    required: false,
+    type: () => StudentWhereUniqueInput,
+  })
+  @ValidateNested()
+  @Type(() => StudentWhereUniqueInput)
+  @IsOptional()
+  @Field(() => StudentWhereUniqueInput, {
+    nullable: true,
+  })
+  student?: StudentWhereUniqueInput | null;
+}
+
 export { FeeUpdateInput as FeeUpdateInput };

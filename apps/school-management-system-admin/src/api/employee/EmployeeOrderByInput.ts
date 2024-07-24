@@ -4,4 +4,7 @@ export type EmployeeOrderByInput = {
   id?: SortOrder;
   createdAt?: SortOrder;
   updatedAt?: SortOrder;
+  name?: SortOrder;
+  position?: SortOrder;
+  salaryDetails?: SortOrder;
 };
