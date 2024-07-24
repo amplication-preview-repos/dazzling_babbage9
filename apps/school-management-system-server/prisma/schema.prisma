@@ -1,0 +1,121 @@
+datasource db {
+  provider = "postgresql"
+  url      = env("DB_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+model Employee {
+  id            String    @id @default(cuid())
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+  name          String?
+  position      String?
+  salaryDetails Float?
+  payrolls      Payroll[]
+}
+
+model Student {
+  id            String   @id @default(cuid())
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+  customProfile Json?
+  documents     Json?
+  photos        Json?
+  fees          Fee[]
+}
+
+model School {
+  id                  String                         @id @default(cuid())
+  createdAt           DateTime                       @default(now())
+  updatedAt           DateTime                       @updatedAt
+  name                String?
+  weekendDays         EnumSchoolWeekendDays[]
+  holidaysCalculation EnumSchoolHolidaysCalculation?
+  styles              Json?
+  address             String?
+  contactDetails      String?
+  deductionsFrom      EnumSchoolDeductionsFrom?
+  subscriptions       Subscription[]
+}
+
+model Subscription {
+  id             String                        @id @default(cuid())
+  createdAt      DateTime                      @default(now())
+  updatedAt      DateTime                      @updatedAt
+  packageField   EnumSubscriptionPackageField?
+  expirationDate DateTime?
+  school         School?                       @relation(fields: [schoolId], references: [id])
+  schoolId       String?
+}
+
+model Payroll {
+  id         String    @id @default(cuid())
+  createdAt  DateTime  @default(now())
+  updatedAt  DateTime  @updatedAt
+  baseSalary Float?
+  allowances Float?
+  deductions Float?
+  netSalary  Float?
+  employee   Employee? @relation(fields: [employeeId], references: [id])
+  employeeId String?
+}
+
+model Fee {
+  id               String                   @id @default(cuid())
+  createdAt        DateTime                 @default(now())
+  updatedAt        DateTime                 @updatedAt
+  amount           Float?
+  paymentDate      DateTime?
+  paymentFrequency EnumFeePaymentFrequency?
+  installments     Json?
+  student          Student?                 @relation(fields: [studentId], references: [id])
+  studentId        String?
+}
+
+model Holiday {
+  id        String    @id @default(cuid())
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  name      String?
+  date      DateTime?
+}
+
+model User {
+  id        String        @id @default(cuid())
+  createdAt DateTime      @default(now())
+  updatedAt DateTime      @updatedAt
+  firstName String?
+  lastName  String?
+  username  String        @unique
+  email     String?       @unique
+  password  String
+  roles     Json
+  role      EnumUserRole?
+}
+
+enum EnumSchoolWeekendDays {
+  Option1
+}
+
+enum EnumSchoolHolidaysCalculation {
+  Option1
+}
+
+enum EnumSchoolDeductionsFrom {
+  Option1
+}
+
+enum EnumSubscriptionPackageField {
+  Option1
+}
+
+enum EnumFeePaymentFrequency {
+  Option1
+}
+
+enum EnumUserRole {
+  Option1
+}
